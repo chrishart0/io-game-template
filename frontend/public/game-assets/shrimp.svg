@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main shrimp body -->
+  <path d="M30,50 Q40,30 65,40 Q75,45 80,55 Q70,65 50,60 Q30,55 30,50 Z" fill="#FF6B8B" stroke="#E64A73" stroke-width="2"/>
+  
+  <!-- Tail -->
+  <path d="M30,50 Q25,52 22,48 Q20,45 25,43 Q30,42 30,50 Z" fill="#FF6B8B" stroke="#E64A73" stroke-width="2"/>
+  
+  <!-- Head details -->
+  <path d="M65,40 Q75,35 82,40 Q85,45 80,55 Q75,50 65,40 Z" fill="#FF8DA1" stroke="#E64A73" stroke-width="1"/>
+  
+  <!-- Eyes -->
+  <circle cx="75" cy="45" r="4" fill="white" stroke="#333" stroke-width="1"/>
+  <circle cx="75" cy="45" r="2" fill="#333"/>
+  
+  <!-- Antenna -->
+  <path d="M80,40 Q85,30 90,35" fill="none" stroke="#E64A73" stroke-width="2" stroke-linecap="round"/>
+  <path d="M83,38 Q90,33 92,38" fill="none" stroke="#E64A73" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Legs/swimmerets -->
+  <path d="M45,55 Q45,60 50,62" fill="none" stroke="#E64A73" stroke-width="2" stroke-linecap="round"/>
+  <path d="M55,57 Q55,62 60,64" fill="none" stroke="#E64A73" stroke-width="2" stroke-linecap="round"/>
+  <path d="M65,55 Q65,60 70,62" fill="none" stroke="#E64A73" stroke-width="2" stroke-linecap="round"/>
+</svg> 

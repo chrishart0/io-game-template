@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Plankton body -->
+  <path d="M15,20 Q15,15 20,15 Q25,15 25,20 Q25,25 20,25 Q15,25 15,20 Z" fill="#2dd4bf" stroke="#14b8a6" stroke-width="1"/>
+  
+  <!-- Spines -->
+  <path d="M20,15 L20,10" fill="none" stroke="#14b8a6" stroke-width="1" stroke-linecap="round"/>
+  <path d="M15,20 L10,20" fill="none" stroke="#14b8a6" stroke-width="1" stroke-linecap="round"/>
+  <path d="M20,25 L20,30" fill="none" stroke="#14b8a6" stroke-width="1" stroke-linecap="round"/>
+  <path d="M25,20 L30,20" fill="none" stroke="#14b8a6" stroke-width="1" stroke-linecap="round"/>
+  
+  <path d="M17,17 L13,13" fill="none" stroke="#14b8a6" stroke-width="1" stroke-linecap="round"/>
+  <path d="M23,17 L27,13" fill="none" stroke="#14b8a6" stroke-width="1" stroke-linecap="round"/>
+  <path d="M17,23 L13,27" fill="none" stroke="#14b8a6" stroke-width="1" stroke-linecap="round"/>
+  <path d="M23,23 L27,27" fill="none" stroke="#14b8a6" stroke-width="1" stroke-linecap="round"/>
+  
+  <!-- Center detail -->
+  <circle cx="20" cy="20" r="3" fill="#34d399" opacity="0.7"/>
+</svg> 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Simplified shrimp shape -->
+  <path d="M25,50 Q40,35 70,45 Q80,55 70,65 Q50,70 25,50 Z" fill="#FF6B8B" stroke="#E64A73" stroke-width="2"/>
+  
+  <!-- Simple eye -->
+  <circle cx="70" cy="50" r="4" fill="white"/>
+  <circle cx="70" cy="50" r="2" fill="#333"/>
+</svg> 
