@@ -8,6 +8,7 @@ interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
   sendInput: (inputData: PlayerInput) => void;
+  gameState: GameState | null;
 }
 
 // Interface for player input data
@@ -16,11 +17,33 @@ export interface PlayerInput {
   y: number;
 }
 
+// Interface for Shrimp (player)
+export interface Shrimp {
+  id: string;
+  x: number;
+  y: number;
+  size: number;
+}
+
+// Interface for Food item
+export interface Food {
+  x: number;
+  y: number;
+  size: number;
+}
+
+// Interface for the complete game state
+export interface GameState {
+  shrimps: Shrimp[];
+  foods: Food[];
+}
+
 // Create the context with default values
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   isConnected: false,
   sendInput: () => {}, // Default no-op function
+  gameState: null,
 });
 
 // Hook to use socket in components
@@ -33,6 +56,7 @@ interface SocketProviderProps {
 export const SocketProvider = ({ children }: SocketProviderProps) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [gameState, setGameState] = useState<GameState | null>(null);
 
   // Function to send player input to the server
   const sendInput = (inputData: PlayerInput) => {
@@ -71,22 +95,31 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
       setIsConnected(false);
     };
 
+    // Game state update handler
+    const onGameUpdate = (updatedState: GameState) => {
+      console.log('Game state update received:', updatedState);
+      console.log(`Shrimps: ${updatedState.shrimps.length}, Foods: ${updatedState.foods.length}`);
+      setGameState(updatedState);
+    };
+
     // Register event handlers
     socketInstance.on('connect', onConnect);
     socketInstance.on('disconnect', onDisconnect);
     socketInstance.on('connect_error', onError);
+    socketInstance.on('gameUpdate', onGameUpdate);
 
     // Cleanup on unmount
     return () => {
       socketInstance.off('connect', onConnect);
       socketInstance.off('disconnect', onDisconnect);
       socketInstance.off('connect_error', onError);
+      socketInstance.off('gameUpdate', onGameUpdate);
       socketInstance.disconnect();
     };
   }, []);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected, sendInput }}>
+    <SocketContext.Provider value={{ socket, isConnected, sendInput, gameState }}>
       {children}
     </SocketContext.Provider>
   );

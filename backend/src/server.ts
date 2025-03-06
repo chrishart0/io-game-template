@@ -2,6 +2,7 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import * as dotenv from 'dotenv';
+import { initGameState, addShrimp, removeShrimp, updateShrimpPosition, getGameState, processEating } from './game-state';
 
 // Load environment variables
 dotenv.config();
@@ -21,15 +22,8 @@ const io = new Server(server, {
   }
 });
 
-// Track connected players
-interface Player {
-  id: string;
-  connectionTime: Date;
-  position?: {
-    x: number;
-    y: number;
-  };
-}
+// Initialize the game state
+initGameState();
 
 // Interface for player input data
 interface PlayerInput {
@@ -37,56 +31,44 @@ interface PlayerInput {
   y: number;
 }
 
-const connectedPlayers: Map<string, Player> = new Map();
+// Game loop configuration
+const FRAME_RATE = 30; // Target 30 FPS
+const FRAME_DELAY = Math.floor(1000 / FRAME_RATE); // ~33ms between frames
+const LOG_INTERVAL = 1000; // Log once per second
+let lastLogTime = 0; // Track when we last logged
 
 // Socket.IO connection handler
 io.on('connection', (socket) => {
   // Log new player connection
   console.log(`Player connected: ${socket.id}`);
   
-  // Add player to connected players map
-  connectedPlayers.set(socket.id, {
-    id: socket.id,
-    connectionTime: new Date()
-  });
+  // Add player as shrimp to game state
+  const shrimp = addShrimp(socket.id);
   
   // Broadcast current player count to all clients
-  io.emit('player_count', connectedPlayers.size);
+  io.emit('player_count', io.engine.clientsCount);
   
   // Log current player count
-  console.log(`Total players connected: ${connectedPlayers.size}`);
+  console.log(`Total players connected: ${io.engine.clientsCount}`);
 
   // Handle player input events (mouse movement)
   socket.on('input', (inputData: PlayerInput) => {
-    // Log received input coordinates
-    console.log(`Player ${socket.id} moved to x: ${inputData.x}, y: ${inputData.y}`);
-    
-    // Update player position in the connected players map
-    const player = connectedPlayers.get(socket.id);
-    if (player) {
-      player.position = {
-        x: inputData.x,
-        y: inputData.y
-      };
-      connectedPlayers.set(socket.id, player);
-    }
-    
-    // Here you would typically update the game state and broadcast to other players
-    // This will be implemented in future milestones
+    // Update shrimp position based on player input
+    updateShrimpPosition(socket.id, inputData.x, inputData.y);
   });
 
   // Handle player disconnect
   socket.on('disconnect', () => {
     console.log(`Player disconnected: ${socket.id}`);
     
-    // Remove player from connected players map
-    connectedPlayers.delete(socket.id);
+    // Remove shrimp from game state
+    removeShrimp(socket.id);
     
     // Broadcast updated player count
-    io.emit('player_count', connectedPlayers.size);
+    io.emit('player_count', io.engine.clientsCount);
     
     // Log current player count
-    console.log(`Total players connected: ${connectedPlayers.size}`);
+    console.log(`Total players connected: ${io.engine.clientsCount}`);
   });
 });
 
@@ -94,9 +76,30 @@ io.on('connection', (socket) => {
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok',
-    playersConnected: connectedPlayers.size 
+    playersConnected: io.engine.clientsCount 
   });
 });
+
+// Start the game loop
+setInterval(() => {
+  // Process game mechanics (eating food)
+  processEating();
+  
+  // Get the current game state
+  const currentState = getGameState();
+  
+  // Get current time
+  const currentTime = Date.now();
+  
+  // Log only once per second to avoid console spam
+  if (currentTime - lastLogTime >= LOG_INTERVAL) {
+    console.log(`Game update: ${currentState.shrimps.length} shrimps, ${currentState.foods.length} food items`);
+    lastLogTime = currentTime;
+  }
+  
+  // Broadcast the game state to all connected clients
+  io.emit('gameUpdate', currentState);
+}, FRAME_DELAY);
 
 // Start the server
 server.listen(PORT, () => {
