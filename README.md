@@ -1,213 +1,137 @@
-# .io-Style Game Development Roadmap
+# Shrimp.io Game
 
-This document provides a structured guide for building a massively multiplayer .io-style game (e.g., similar to Agar.io or Slither.io). The project uses **NextJS** for the frontend and **Node.js** with **Express.js** and **Socket.IO** for the backend, all within a single repository. The roadmap includes a todo list, an outcome-based milestone plan, and repository context to facilitate development and collaboration.
+A real-time multiplayer .io-style game built with Next.js, React, Node.js, Express and Socket.IO. Players control shrimp characters that grow by consuming food and other players.
 
----
+![Shrimp.io Game](https://via.placeholder.com/800x400?text=Shrimp.io+Game+Screenshot)
 
 ## Project Overview
 
-The goal is to create a real-time, multiplayer game with the following features:
-- **Real-time Communication**: Players' actions (e.g., movement) are sent to the server and broadcast to others instantly.
-- **Scalability**: The system should handle multiple simultaneous players.
-- **Simple Web UI**: A minimal interface using a canvas for game rendering.
-- **Ease of Setup**: A straightforward tech stack for quick development.
-- **Performance Optimization**: Adaptive performance settings based on device capabilities and game load.
-- **Visual Effects**: Engaging visual feedback for game events like food consumption.
+**Shrimp.io** is a fun, fast-paced multiplayer game with:
+- **Real-time WebSocket Communication**: Instant movement synchronization among all players
+- **Canvas-based Rendering**: Smooth animation and efficient graphics
+- **Performance Optimizations**: Adaptive rendering based on device capabilities
+- **Visual Effects**: Engaging animations and feedback for game events
+- **AI-Assisted Development**: Optimized for Cursor powered by Claude 3 Sonnet
 
-### Tech Stack
-- **Frontend**: NextJS (React) with `socket.io-client` for WebSocket communication.
-- **Backend**: Node.js with Express.js and Socket.IO for real-time, bidirectional communication.
-- **Repository Structure**: Both frontend and backend are organized in a single repo for simplicity.
+### Features
 
----
+- 🎮 Move your shrimp with the mouse
+- 🍔 Consume food particles to grow larger
+- 🦐 Eat smaller shrimps to gain their size
+- 📊 Compete on the live leaderboard
+- ⚙️ Toggle performance mode for smoother gameplay
 
-## Repository Context
+## Tech Stack
 
-The repository is structured to keep the frontend and backend in separate directories, with a root-level `package.json` to manage both.
+- **Frontend**: Next.js (App Router) with TypeScript, React, and `socket.io-client`
+- **Backend**: Node.js with Express.js, TypeScript, and Socket.IO
+- **Development**: AI-assisted coding with Cursor powered by Claude
 
-### Directory Structure
+## Repository Structure
+
 ```
 my-io-game/
-├── frontend/                 # NextJS frontend
-│   ├── package.json          # Frontend dependencies (NextJS, socket.io-client)
-│   ├── app/                  # NextJS app directory (App Router)
-│   │   ├── page.tsx          # Main game page with canvas element
-│   │   ├── layout.tsx        # Root layout component
-│   │   └── globals.css       # Global styles
-│   ├── src/                  # Source code directory
-│   │   └── components/       # React components
-│   │       ├── socket-provider.tsx # WebSocket connection provider
-│   │       └── game-canvas.tsx # Game rendering and interaction
-│   └── public/               # Static assets
-│       └── game-assets/      # Game SVG assets and sprites
-├── backend/                  # Node.js backend with Express.js and Socket.IO
-│   ├── package.json          # Backend dependencies (express, socket.io)
-│   ├── src/                  # Source code directory
-│   │   └── server.ts         # Backend server with Socket.IO
-│   └── .env                  # Environment variables for backend
-└── package.json              # Root package.json with scripts to manage both frontend and backend
+├── frontend/                 # Next.js frontend
+│   ├── app/                  # Next.js App Router pages
+│   │   ├── page.tsx          # Main game page with leaderboard
+│   │   └── game-styles.css   # Game-specific styles
+│   └── src/                  # Frontend source code
+│       └── components/       # React components
+│           ├── socket-provider.tsx  # WebSocket connection management
+│           └── game-canvas.tsx      # Game rendering and animation
+├── backend/                  # Node.js backend
+│   └── src/                  # Backend source code
+│       ├── server.ts         # Express and Socket.IO server
+│       └── game-state.ts     # Game logic and state management
+├── AI-GUIDE.md               # Guide for AI assistants
+├── AI-CODE-PATTERNS.md       # Common code patterns for AI reference
+├── CURSOR-READY.md           # Summary of AI-optimized improvements
+└── types.d.ts                # Centralized type definitions
 ```
 
-### Key Files
-- **`frontend/app/page.tsx`**: Contains the main game component, including the canvas for rendering and WebSocket connection logic.
-- **`frontend/src/components/socket-provider.tsx`**: Provides a WebSocket connection context for the application.
-- **`frontend/src/components/game-canvas.tsx`**: Handles game rendering, animations, and performance optimizations.
-- **`backend/src/server.ts`**: Sets up the Express.js server and Socket.IO for handling real-time player connections and game state updates.
-- **`package.json` (root)**: Includes scripts to install dependencies and run both the frontend and backend together.
+## Getting Started
 
-### Dependencies
-- **Frontend**:
-  - NextJS
-  - `socket.io-client` (for WebSocket communication)
-  - TypeScript
-- **Backend**:
-  - `express`
-  - `socket.io`
-  - TypeScript
-  - `dotenv` (for environment variables)
+### Prerequisites
 
-### Running the Project
-- **Development**:
-  - Install all dependencies: `npm run install:all`
-  - Start both frontend and backend: `npm run dev`
-- **Production**:
-  - Build the frontend and backend: `npm run build`
-  - Start the backend: `npm start`
+- Node.js 18+ and npm
+- Git
 
----
+### Installation
 
-## Todo List
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/my-io-game.git
+cd my-io-game
+```
 
-This todo list breaks down the development process into actionable tasks. Each task should be checked off as it's completed.
+2. Install dependencies:
+```bash
+npm run install:all
+```
 
-### Frontend (NextJS)
-- [X] Initialize a new NextJS project in the `frontend/` directory.
-- [X] Install `socket.io-client` for WebSocket communication.
-- [X] Create a game page (`app/page.tsx`) with a canvas element for rendering the game.
-- [X] Implement WebSocket connection logic in the game component to connect to the backend.
-- [X] Add event listeners for player inputs (e.g., mouse movements, keyboard inputs).
-- [X] Render the game state on the canvas based on updates received from the server.
-- [X] Add visual effects for gameplay events (e.g., eating animations).
-- [X] Implement performance optimizations (canvas caching, viewport culling).
-- [X] Create adaptive performance mode with automatic/manual control.
+### Running the Development Server
 
-### Backend (Node.js with Express.js and Socket.IO)
-- [X] Initialize a new Node.js project in the `backend/` directory.
-- [X] Install `express` and `socket.io`.
-- [X] Set up an Express.js server in `backend/src/server.ts`.
-- [X] Integrate Socket.IO with the server to handle WebSocket connections.
-- [X] Handle player connections and disconnections, logging them for verification.
-- [X] Handle player input events on the backend side.
-- [X] Implement a game loop to periodically update and broadcast the game state to all connected clients.
+Start both frontend and backend:
+```bash
+npm run dev
+```
 
-### Integration
-- [X] Ensure the frontend successfully connects to the backend via WebSocket.
-- [X] Send player input data (e.g., movement) from the frontend to the backend.
-- [X] Receive and process game state updates on the frontend to reflect the current game state.
+- Frontend: http://localhost:3000
+- Backend: http://localhost:4000
 
-### Game Logic
-- [X] Define the structure of the game state (e.g., player positions, scores, game objects).
-- [X] Implement server-side logic to update the game state based on player inputs and game rules.
-- [X] Broadcast the updated game state to all connected clients at regular intervals.
+### Configuration
 
-### Visual Enhancements
-- [X] Create SVG assets for game entities (shrimps, food)
-- [X] Implement asset preloading for improved performance
-- [X] Add visual feedback for gameplay events (eating animations)
-- [X] Improve UI layout and organization
+- **Frontend**: Set `NEXT_PUBLIC_BACKEND_URL` in `.env.local` (default: http://localhost:4000)
+- **Backend**: Set `PORT` in `.env` (default: 4000)
 
-### Deployment
-- [X] Configure environment variables for production (e.g., `NEXT_PUBLIC_BACKEND_URL`, `PORT`).
-- [ ] Build the NextJS frontend for production using `next build`.
-- [ ] Set up a hosting platform for the backend (e.g., Heroku, AWS EC2, or a VPS).
-- [ ] Deploy the backend and ensure the frontend connects to the deployed backend URL.
+## AI-Assisted Development
 
----
+This project is optimized for AI-assisted development with Cursor powered by Claude. Special features include:
 
-## Outcome-Based Roadmap
+- **AI Documentation**: Dedicated files like `AI-GUIDE.md` and `AI-CODE-PATTERNS.md` to help AI assistants understand the codebase
+- **Type Centralization**: Core types aggregated in `types.d.ts` for easy reference
+- **Code Organization**: Clear section markers and comprehensive JSDoc comments
+- **Pattern Consistency**: Standardized React patterns, state management, and Socket.IO communication
 
-This roadmap outlines the major milestones of the project, each with a clear outcome to achieve. It helps track progress and ensures the project stays on course.
+For detailed information on AI-optimized improvements, see [CURSOR-READY.md](./CURSOR-READY.md).
 
-### Milestone 1: Project Setup ✅
-- **Outcome**: A basic project structure with frontend and backend directories, and a root `package.json` to manage both.
-- **Tasks**:
-  - Initialize NextJS project in `frontend/`. ✅
-  - Initialize Node.js project in `backend/`. ✅
-  - Create root `package.json` with scripts to install dependencies and run both frontend and backend. ✅
+## Development Workflow
 
-### Milestone 2: Basic WebSocket Connection ✅
-- **Outcome**: The frontend can connect to the backend via WebSocket, and connections are logged.
-- **Tasks**:
-  - Implement WebSocket connection logic in the frontend using `socket.io-client`. ✅
-  - Set up Socket.IO server in the backend to accept connections. ✅
-  - Log player connections and disconnections on the backend. ✅
+### Adding New Features
 
-### Milestone 3: Player Input Handling ✅
-- **Outcome**: Players can send inputs (e.g., movement) to the server, and the server acknowledges receipt.
-- **Tasks**:
-  - Add event listeners for player inputs on the frontend (e.g., mouse movements). ✅
-  - Send input data to the backend via WebSocket. ✅
-  - Handle and log input events on the backend. ✅
+1. Define interfaces in both frontend (`socket-provider.tsx`) and backend (`game-state.ts`)
+2. Add server-side logic in the appropriate backend file
+3. Implement client-side rendering in `game-canvas.tsx`
+4. Add UI components in `page.tsx` if needed
 
-### Milestone 4: Game State Management ✅
-- **Outcome**: The server maintains a game state and broadcasts it to all connected clients.
-- **Tasks**:
-  - Define the game state structure (e.g., player positions, game objects). ✅
-  - Implement a game loop on the server to update the game state periodically. ✅
-  - Broadcast the updated game state to all connected clients. ✅
+### Project Status
 
-### Milestone 5: Rendering the Game ✅
-- **Outcome**: The frontend renders the game based on the state received from the server.
-- **Tasks**:
-  - Receive game state updates on the frontend via WebSocket. ✅
-  - Use the canvas API to render the game state (e.g., draw players, objects). ✅
-  - Implement visual effects and animations. ✅
+This project has completed most key milestones:
 
-### Milestone 6: Performance Optimization ✅
-- **Outcome**: The game runs smoothly with multiple entities and on various devices.
-- **Tasks**:
-  - Implement canvas caching for frequently rendered elements. ✅
-  - Add viewport culling to only render visible entities. ✅
-  - Create performance mode toggle with auto/manual options. ✅
-  - Monitor FPS and adapt rendering quality accordingly. ✅
+✅ Project Setup  
+✅ WebSocket Connection  
+✅ Player Input Handling  
+✅ Game State Management  
+✅ Rendering and Animations  
+✅ Performance Optimization  
+⬜ Deployment  
 
-### Milestone 7: Deployment
-- **Outcome**: The game is deployed and accessible online, with the frontend served by the backend.
-- **Tasks**:
-  - Build the NextJS frontend for production.
-  - Configure the backend to serve the static frontend files.
-  - Deploy the backend to a hosting platform and update the frontend to connect to the deployed backend.
+## Contributing
 
----
+See [AI-CODE-PATTERNS.md](./AI-CODE-PATTERNS.md) for guidance on common code patterns used in this project.
 
-## Additional Notes for Collaboration
+## Game Mechanics
 
-- **Environment Variables**:
-  - Use `NEXT_PUBLIC_BACKEND_URL` in the frontend to specify the backend WebSocket URL (e.g., `http://localhost:4000` for development, or the production URL).
-  - Use `PORT` in the backend to set the server port (default: 4000).
+- Shrimps move toward the cursor position
+- Each food item increases your size and score
+- Larger shrimps can eat smaller ones
+- The larger you grow, the slower you move
+- Performance mode activates automatically when FPS drops below 40
 
-- **TypeScript**:
-  - Both frontend and backend use TypeScript for type safety.
-  - Interfaces are used for defining types (e.g., `Player` interface).
+## License
 
-- **Development Workflow**:
-  - Run `npm run dev` from the root directory to start both frontend and backend development servers.
-  - The frontend will be available at `http://localhost:3000`, and the backend at `http://localhost:4000`.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-- **Game Features**:
-  - Performance mode automatically activates when FPS drops below 40 or when there are more than 30 entities
-  - Visual effects show colorful animations when food is consumed
-  - SVG assets are cached as canvas elements for improved rendering performance
+## Acknowledgments
 
-- **Production Considerations**:
-  - The backend serves the static frontend files from the build output.
-  - Ensure the hosting platform supports WebSocket connections (e.g., Heroku with WebSockets enabled).
-
-- **Contributing**:
-  - Follow the todo list and roadmap to implement features incrementally.
-  - Test both frontend and backend changes thoroughly.
-  - Update this document as necessary to reflect changes in the project structure or requirements.
-
----
-
-This document provides a clear path for building the .io-style game, with a structured todo list, milestone-based roadmap, and detailed repository context. It ensures that all necessary steps are covered and provides enough information for other developers to contribute effectively.
+- Inspired by classic .io games like Agar.io and Slither.io
