@@ -80,7 +80,7 @@ This todo list breaks down the development process into actionable tasks. Each t
 - [X] Install `socket.io-client` for WebSocket communication.
 - [X] Create a game page (`app/page.tsx`) with a canvas element for rendering the game.
 - [X] Implement WebSocket connection logic in the game component to connect to the backend.
-- [ ] Add event listeners for player inputs (e.g., mouse movements, keyboard inputs).
+- [X] Add event listeners for player inputs (e.g., mouse movements, keyboard inputs).
 - [ ] Render the game state on the canvas based on updates received from the server.
 
 ### Backend (Node.js with Express.js and Socket.IO)
@@ -89,11 +89,12 @@ This todo list breaks down the development process into actionable tasks. Each t
 - [X] Set up an Express.js server in `backend/src/server.ts`.
 - [X] Integrate Socket.IO with the server to handle WebSocket connections.
 - [X] Handle player connections and disconnections, logging them for verification.
+- [X] Handle player input events on the backend side.
 - [ ] Implement a game loop to periodically update and broadcast the game state to all connected clients.
 
 ### Integration
 - [X] Ensure the frontend successfully connects to the backend via WebSocket.
-- [ ] Send player input data (e.g., movement) from the frontend to the backend.
+- [X] Send player input data (e.g., movement) from the frontend to the backend.
 - [ ] Receive and process game state updates on the frontend to reflect the current game state.
 
 ### Game Logic
@@ -127,12 +128,12 @@ This roadmap outlines the major milestones of the project, each with a clear out
   - Set up Socket.IO server in the backend to accept connections. ✅
   - Log player connections and disconnections on the backend. ✅
 
-### Milestone 3: Player Input Handling
+### Milestone 3: Player Input Handling ✅
 - **Outcome**: Players can send inputs (e.g., movement) to the server, and the server acknowledges receipt.
 - **Tasks**:
-  - Add event listeners for player inputs on the frontend (e.g., mouse movements).
-  - Send input data to the backend via WebSocket.
-  - Handle and log input events on the backend.
+  - Add event listeners for player inputs on the frontend (e.g., mouse movements). ✅
+  - Send input data to the backend via WebSocket. ✅
+  - Handle and log input events on the backend. ✅
 
 ### Milestone 4: Game State Management
 - **Outcome**: The server maintains a game state and broadcasts it to all connected clients.

@@ -7,12 +7,20 @@ import { Socket, io } from 'socket.io-client';
 interface SocketContextType {
   socket: Socket | null;
   isConnected: boolean;
+  sendInput: (inputData: PlayerInput) => void;
+}
+
+// Interface for player input data
+export interface PlayerInput {
+  x: number;
+  y: number;
 }
 
 // Create the context with default values
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   isConnected: false,
+  sendInput: () => {}, // Default no-op function
 });
 
 // Hook to use socket in components
@@ -25,6 +33,14 @@ interface SocketProviderProps {
 export const SocketProvider = ({ children }: SocketProviderProps) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+
+  // Function to send player input to the server
+  const sendInput = (inputData: PlayerInput) => {
+    if (socket && isConnected) {
+      // Send 'input' event with mouse coordinates
+      socket.emit('input', inputData);
+    }
+  };
 
   useEffect(() => {
     // Get the backend URL from environment variable or use default
@@ -70,7 +86,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
   }, []);
 
   return (
-    <SocketContext.Provider value={{ socket, isConnected }}>
+    <SocketContext.Provider value={{ socket, isConnected, sendInput }}>
       {children}
     </SocketContext.Provider>
   );

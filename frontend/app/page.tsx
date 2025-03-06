@@ -1,75 +1,26 @@
 "use client"
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SocketProvider, useSocket } from '@/src/components/socket-provider';
+import { GameCanvas } from '@/src/components/game-canvas';
 import './game-styles.css';
 
 // Main game component
 function Game() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { isConnected, socket } = useSocket();
   const [playerCount, setPlayerCount] = useState(0);
 
   useEffect(() => {
-    // Canvas and game initialization code can go here
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!socket) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    // Listen for player count updates
+    socket.on('player_count', (count: number) => {
+      setPlayerCount(count);
+    });
 
-    // Set up the canvas with a dark background
-    ctx.fillStyle = '#0f172a'; // Dark blue background
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw a grid pattern for the game world
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 1;
-    
-    // Draw grid lines
-    const gridSize = 40;
-    for (let x = 0; x < canvas.width; x += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
-    }
-    
-    for (let y = 0; y < canvas.height; y += gridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
-
-    // Draw a player shape (simple circle with glow effect)
-    const centerX = canvas.width / 2 - 200;
-    const centerY = canvas.height / 2 - 100;
-    const radius = 30;
-
-    // Create gradient for glow effect
-    const gradient = ctx.createRadialGradient(
-      centerX, centerY, radius * 0.5,
-      centerX, centerY, radius * 1.5
-    );
-    gradient.addColorStop(0, '#60a5fa');
-    gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-    
-    // Draw glow
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 1.5, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Draw player
-    ctx.fillStyle = '#3b82f6';
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Draw a simple rectangle to represent food or another player
-    ctx.fillStyle = '#f43f5e';
-    ctx.fillRect(centerX + 200, centerY, 20, 20);
-  }, []);
+    return () => {
+      socket.off('player_count');
+    };
+  }, [socket]);
 
   return (
     <div className="flex flex-col items-center min-h-screen game-bg p-6">
@@ -97,9 +48,8 @@ function Game() {
         {/* Game container */}
         <div className="relative w-full game-container game-glow">
           <div className="bg-black/25 rounded-lg p-1.5 backdrop-blur-sm border border-white/10 shadow-xl">
-            {/* Game canvas */}
-            <canvas 
-              ref={canvasRef} 
+            {/* Game canvas - using the GameCanvas component instead of inline canvas */}
+            <GameCanvas 
               width={800} 
               height={600} 
               className="w-full h-full rounded bg-black/50"
@@ -112,7 +62,7 @@ function Game() {
             
             {/* Controls hint */}
             <div className="absolute top-4 right-4 bg-black/50 px-3 py-1.5 rounded-md text-xs backdrop-blur-sm border border-white/10 text-muted-foreground">
-              Use WASD or arrow keys to move
+              Move your mouse to control
             </div>
           </div>
         </div>
@@ -121,7 +71,7 @@ function Game() {
         <div className="w-full max-w-2xl mt-6 px-6 py-4 bg-black/25 rounded-lg backdrop-blur-sm border border-white/10">
           <h2 className="text-lg font-semibold mb-2 text-glow">How to Play</h2>
           <p className="text-sm text-muted-foreground">
-            Control your player and collect resources. Avoid larger enemies and try to grow bigger!
+            Control your player by moving your mouse. The player will follow your cursor position.
           </p>
         </div>
       </div>

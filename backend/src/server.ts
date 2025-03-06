@@ -25,6 +25,16 @@ const io = new Server(server, {
 interface Player {
   id: string;
   connectionTime: Date;
+  position?: {
+    x: number;
+    y: number;
+  };
+}
+
+// Interface for player input data
+interface PlayerInput {
+  x: number;
+  y: number;
 }
 
 const connectedPlayers: Map<string, Player> = new Map();
@@ -40,8 +50,30 @@ io.on('connection', (socket) => {
     connectionTime: new Date()
   });
   
+  // Broadcast current player count to all clients
+  io.emit('player_count', connectedPlayers.size);
+  
   // Log current player count
   console.log(`Total players connected: ${connectedPlayers.size}`);
+
+  // Handle player input events (mouse movement)
+  socket.on('input', (inputData: PlayerInput) => {
+    // Log received input coordinates
+    console.log(`Player ${socket.id} moved to x: ${inputData.x}, y: ${inputData.y}`);
+    
+    // Update player position in the connected players map
+    const player = connectedPlayers.get(socket.id);
+    if (player) {
+      player.position = {
+        x: inputData.x,
+        y: inputData.y
+      };
+      connectedPlayers.set(socket.id, player);
+    }
+    
+    // Here you would typically update the game state and broadcast to other players
+    // This will be implemented in future milestones
+  });
 
   // Handle player disconnect
   socket.on('disconnect', () => {
@@ -49,6 +81,9 @@ io.on('connection', (socket) => {
     
     // Remove player from connected players map
     connectedPlayers.delete(socket.id);
+    
+    // Broadcast updated player count
+    io.emit('player_count', connectedPlayers.size);
     
     // Log current player count
     console.log(`Total players connected: ${connectedPlayers.size}`);
