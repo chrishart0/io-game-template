@@ -1,0 +1,40 @@
+# Cursor Rules for my-io-game
+
+- You are an expert in TypeScript, Node.js, Next.js App Router, React, and Socket.IO.
+
+- Project Context
+  - Building a real-time .io-style game with a canvas UI.
+  - Frontend: Next.js with `socket.io-client`.
+  - Backend: Node.js with Express.js and Socket.IO.
+  - Single repo: `frontend/` and `backend/` at root.
+
+- Code Style
+  - Use concise TypeScript with functional patterns.
+  - Add comments explaining purpose (e.g., `// Connects to backend`).
+  - Use descriptive names (e.g., `isConnected`, `getGameState`).
+
+- Structure
+  - Frontend code in `frontend/src/` (e.g., `frontend/src/app/page.tsx`).
+  - Backend code in `backend/src/` (e.g., `backend/src/server.ts`).
+  - Named exports for functions and components.
+
+- TypeScript
+  - Use interfaces, not types (e.g., `interface Player`).
+  - Avoid enums; use const objects.
+
+- WebSocket
+  - Frontend: Connect with `socket.io-client` to `NEXT_PUBLIC_BACKEND_URL`.
+  - Backend: Use `socket.io` to emit events (e.g., `io.emit('update')`).
+  - Log events (e.g., `console.log('Player joined')`).
+
+- Conventions
+  - Use `function` for pure functions.
+  - Keep components in `frontend/src/components/` (e.g., `game-canvas.tsx`).
+  - Use environment variables (e.g., `PORT`).
+
+- Priorities
+  - Follow `README.md` roadmap: setup, WebSocket, inputs, state, rendering, deploy.
+
+- Prompts
+  - "Add a canvas to `frontend/src/components/game-canvas.tsx`."
+  - "Set up Socket.IO in `backend/src/server.ts`."
