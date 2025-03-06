@@ -1,20 +1,80 @@
+/**
+ * Socket.IO Game Server
+ * 
+ * This module implements the WebSocket server using Socket.IO and Express.
+ * It handles player connections, input processing, and game state broadcasting.
+ * The server maintains the authoritative game state and runs the game loop.
+ * 
+ * Key responsibilities:
+ * - Socket.IO server setup and configuration
+ * - Player connection/disconnection handling
+ * - Input event processing
+ * - Game loop execution
+ * - State broadcasting to clients
+ * 
+ * @module server
+ */
+
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import * as dotenv from 'dotenv';
-import { initGameState, addShrimp, removeShrimp, updateShrimpPosition, getGameState, processEating } from './game-state';
+import { 
+  initGameState, 
+  addShrimp, 
+  removeShrimp, 
+  updateShrimpPosition, 
+  getGameState, 
+  processEating 
+} from './game-state';
+
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
 
 // Load environment variables
 dotenv.config();
 
+/**
+ * Server configuration interface
+ * Centralizes all server-specific configuration parameters
+ */
+interface ServerConfig {
+  port: number;            // Server port number
+  targetFps: number;       // Target frame rate for game loop
+  stateUpdateRate: number; // Rate to send updates to clients (fps)
+  logInterval: number;     // How often to log game state (ms)
+}
+
+/**
+ * Define server configuration with defaults
+ * All timing values derived from this configuration
+ */
+const CONFIG: ServerConfig = {
+  port: Number(process.env.PORT) || 4000,
+  targetFps: 60,                          // Target frame rate for game loop
+  stateUpdateRate: 30,                    // Rate to send updates to clients (fps)
+  logInterval: 1000,                      // Log interval in milliseconds
+};
+
+// Calculate timing parameters from configuration
+const FRAME_DELAY = Math.floor(1000 / CONFIG.targetFps);
+const STATE_UPDATE_INTERVAL = 1000 / CONFIG.stateUpdateRate;
+
+// =============================================================================
+// SERVER SETUP
+// =============================================================================
+
 // Initialize express app
 const app = express();
-const PORT = process.env.PORT || 4000;
 
 // Create HTTP server
 const server = http.createServer(app);
 
-// Configure CORS for Socket.IO
+/**
+ * Configure CORS for Socket.IO
+ * In production, this should be restricted to your frontend URL
+ */
 const io = new Server(server, {
   cors: {
     origin: '*', // In production, restrict this to your frontend URL
@@ -25,25 +85,35 @@ const io = new Server(server, {
 // Initialize the game state
 initGameState();
 
-// Interface for player input data
+// =============================================================================
+// TYPE DEFINITIONS
+// =============================================================================
+
+/**
+ * Player input data interface
+ * Represents mouse movement data from clients
+ */
 interface PlayerInput {
-  x: number;
-  y: number;
+  x: number; // Target X position from mouse
+  y: number; // Target Y position from mouse
 }
 
-// Game loop configuration
-const TARGET_FPS = 60; // Increase to 60 FPS for smoother gameplay
-const FRAME_DELAY = Math.floor(1000 / TARGET_FPS); // ~16ms between frames
-const LOG_INTERVAL = 1000; // Log once per second
-let lastLogTime = 0; // Track when we last logged
-let lastStateUpdate = 0; // Track last state update
-const STATE_UPDATE_INTERVAL = 1000 / 30; // Update client state at 30 FPS (still smooth but less network traffic)
+// =============================================================================
+// TIMING AND LOGGING
+// =============================================================================
+
+// Time tracking variables
+let lastLogTime = 0;
+let lastStateUpdate = 0;
 
 // Track previous shrimp count to detect collisions
 let prevShrimpCount = 0;
 
-// Function to log current game state
-function logGameState() {
+/**
+ * Logs the current game state including all shrimps
+ * Used for debugging and server monitoring
+ */
+function logGameState(): void {
   const state = getGameState();
   console.log(`Current game state: ${state.shrimps.length} shrimps, ${state.foods.length} foods`);
   
@@ -53,7 +123,17 @@ function logGameState() {
   });
 }
 
-// Socket.IO connection handler
+// =============================================================================
+// SOCKET.IO EVENT HANDLERS
+// =============================================================================
+
+/**
+ * Socket.IO connection handler
+ * Manages the entire player lifecycle:
+ * 1. Connection and shrimp creation
+ * 2. Input processing
+ * 3. Disconnection and cleanup
+ */
 io.on('connection', (socket) => {
   // Log new player connection
   console.log(`Player connected: ${socket.id}`);
@@ -74,7 +154,10 @@ io.on('connection', (socket) => {
   // Log current player count
   console.log(`Total players connected: ${io.engine.clientsCount}`);
 
-  // Handle player input events (mouse movement)
+  /**
+   * Handle player input events (mouse movement)
+   * Updates the player's shrimp position based on input
+   */
   socket.on('input', (inputData: PlayerInput) => {
     // Update shrimp position based on player input
     const updatedShrimp = updateShrimpPosition(socket.id, inputData.x, inputData.y);
@@ -89,7 +172,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle player disconnect
+  /**
+   * Handle player disconnect
+   * Removes player from game and updates all clients
+   */
   socket.on('disconnect', () => {
     console.log(`Player disconnected: ${socket.id}`);
     
@@ -107,7 +193,14 @@ io.on('connection', (socket) => {
   });
 });
 
-// Basic health check endpoint
+// =============================================================================
+// REST API ENDPOINTS
+// =============================================================================
+
+/**
+ * Basic health check endpoint
+ * Useful for monitoring and container health checks
+ */
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok',
@@ -115,7 +208,19 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Start the game loop
+// =============================================================================
+// GAME LOOP
+// =============================================================================
+
+/**
+ * Main game loop
+ * Runs at the configured FPS (CONFIG.targetFps)
+ * Handles:
+ * 1. Game mechanics processing
+ * 2. State broadcasting to clients
+ * 3. Collision detection
+ * 4. Debug logging
+ */
 setInterval(() => {
   // Process game mechanics (eating food and shrimp collisions)
   processEating();
@@ -146,14 +251,21 @@ setInterval(() => {
   }
   
   // Log only once per second to avoid console spam
-  if (currentTime - lastLogTime >= LOG_INTERVAL) {
+  if (currentTime - lastLogTime >= CONFIG.logInterval) {
     console.log(`Game update: ${currentState.shrimps.length} shrimps, ${currentState.foods.length} food items`);
     lastLogTime = currentTime;
   }
 }, FRAME_DELAY);
 
-// Start the server
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// =============================================================================
+// SERVER STARTUP
+// =============================================================================
+
+/**
+ * Start the server
+ * Initializes the HTTP server on the configured port
+ */
+server.listen(CONFIG.port, () => {
+  console.log(`Server running on port ${CONFIG.port}`);
   console.log(`Socket.IO server started`);
 }); 

@@ -1,0 +1,28 @@
+<svg width="150" height="200" viewBox="0 0 150 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Seaweed group with bold outlines -->
+  <g stroke="#000" stroke-width="2">
+    <!-- Tall seaweed strand -->
+    <path d="M30,200 C40,180 20,160 30,140 C40,120 20,100 30,80 C40,60 20,40 30,20" 
+          fill="none" stroke="#33CC33" stroke-width="4" />
+    
+    <!-- Medium seaweed strand -->
+    <path d="M70,200 C80,185 60,170 70,155 C80,140 60,125 70,110" 
+          fill="none" stroke="#66CC66" stroke-width="4" />
+    
+    <!-- Short seaweed strand -->
+    <path d="M110,200 C120,185 100,170 110,155" 
+          fill="none" stroke="#99CC33" stroke-width="4" />
+    
+    <!-- Seaweed leaves -->
+    <ellipse cx="35" cy="140" rx="8" ry="4" fill="#33CC33" transform="rotate(-15 35 140)" />
+    <ellipse cx="25" cy="120" rx="8" ry="4" fill="#33CC33" transform="rotate(15 25 120)" />
+    <ellipse cx="35" cy="100" rx="8" ry="4" fill="#33CC33" transform="rotate(-15 35 100)" />
+    <ellipse cx="25" cy="80" rx="8" ry="4" fill="#33CC33" transform="rotate(15 25 80)" />
+    
+    <ellipse cx="75" cy="155" rx="8" ry="4" fill="#66CC66" transform="rotate(-15 75 155)" />
+    <ellipse cx="65" cy="140" rx="8" ry="4" fill="#66CC66" transform="rotate(15 65 140)" />
+    <ellipse cx="75" cy="125" rx="8" ry="4" fill="#66CC66" transform="rotate(-15 75 125)" />
+    
+    <ellipse cx="115" cy="170" rx="8" ry="4" fill="#99CC33" transform="rotate(-15 115 170)" />
+  </g>
+</svg> 

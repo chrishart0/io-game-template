@@ -1,0 +1,22 @@
+<svg width="200" height="150" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Coral group with bold outlines -->
+  <g stroke="#000" stroke-width="2">
+    <!-- Branching coral -->
+    <path d="M20,150 C20,120 40,100 30,80 C20,60 10,50 20,30" fill="none" stroke="#FF5733" stroke-width="3" />
+    <path d="M40,150 C40,130 50,110 40,90 C30,70 50,60 40,40" fill="none" stroke="#FF5733" stroke-width="3" />
+    <path d="M60,150 C60,120 70,100 65,80 C60,60 70,50 60,30" fill="none" stroke="#FF5733" stroke-width="3" />
+    
+    <!-- Round coral formations -->
+    <ellipse cx="90" cy="110" rx="15" ry="20" fill="#FF3366" />
+    <ellipse cx="125" cy="120" rx="25" ry="15" fill="#FF66B2" />
+    <ellipse cx="160" cy="100" rx="20" ry="25" fill="#FF99FF" />
+    
+    <!-- Brain coral -->
+    <path d="M70,130 Q85,110 100,130 Q115,110 130,130 Q145,110 160,130" fill="#33CCCC" stroke-width="3" />
+    
+    <!-- Small details -->
+    <circle cx="30" cy="90" r="5" fill="#FFCC00" />
+    <circle cx="50" cy="70" r="4" fill="#00CCFF" />
+    <circle cx="80" cy="85" r="6" fill="#FF9900" />
+  </g>
+</svg> 

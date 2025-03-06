@@ -1,22 +1,17 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const path = require('path');
+/**
+ * Backend Server Entry Point
+ * 
+ * This file serves as the entry point for the backend server,
+ * importing the server implementation from src/server.ts
+ */
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+// Import required to support TypeScript
+require('ts-node/register');
 
-// Serve static frontend files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/out')));
-  app.get('*', (req, res) => res.sendFile(path.join(__dirname, '../frontend/out/index.html')));
-}
+// Load environment variables
+require('dotenv').config();
 
-io.on('connection', (socket) => {
-  console.log('New player connected:', socket.id);
-  socket.on('disconnect', () => console.log('Player disconnected:', socket.id));
-});
+// Import the actual server implementation
+require('./src/server');
 
-const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+console.log('Backend server started via index.js entry point');

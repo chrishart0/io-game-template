@@ -5,20 +5,32 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "test": "echo \"No tests yet\""
   },
-  "keywords": [],
+  "keywords": [
+    "game",
+    "io-game",
+    "socket.io",
+    "typescript"
+  ],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Backend server for the IO Game template",
   "dependencies": {
     "express": "^4.21.2",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "ts-node": "^10.9.1"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^20.17.23",
     "dotenv": "^16.4.7",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.2"
   }
