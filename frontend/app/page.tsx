@@ -6,7 +6,7 @@ import './game-styles.css';
 
 // Main game component
 function Game() {
-  const { isConnected, socket } = useSocket();
+  const { isConnected, socket, gameState } = useSocket();
   const [playerCount, setPlayerCount] = useState(0);
 
   useEffect(() => {
@@ -21,6 +21,17 @@ function Game() {
       socket.off('player_count');
     };
   }, [socket]);
+
+  // Calculate player score
+  const getPlayerScore = () => {
+    if (!gameState || !socket) return 0;
+    
+    const playerShrimp = gameState.shrimps.find(shrimp => shrimp.id === socket.id);
+    if (playerShrimp) {
+      return playerShrimp.size - 10; // Score = size - initial size
+    }
+    return 0;
+  };
 
   return (
     <div className="flex flex-col items-center min-h-screen game-bg p-6">
@@ -57,7 +68,7 @@ function Game() {
             
             {/* Game overlay UI elements */}
             <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1.5 rounded-md text-sm backdrop-blur-sm border border-white/10">
-              Score: 0
+              Score: {getPlayerScore()}
             </div>
             
             {/* Controls hint */}
@@ -71,7 +82,8 @@ function Game() {
         <div className="w-full max-w-2xl mt-6 px-6 py-4 bg-black/25 rounded-lg backdrop-blur-sm border border-white/10">
           <h2 className="text-lg font-semibold mb-2 text-glow">How to Play</h2>
           <p className="text-sm text-muted-foreground">
-            Control your player by moving your mouse. The player will follow your cursor position.
+            Control your shrimp by moving your mouse. The shrimp will follow your cursor position.
+            Eat the green food dots to grow larger. Your score increases as you grow!
           </p>
         </div>
       </div>

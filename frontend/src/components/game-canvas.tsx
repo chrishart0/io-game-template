@@ -98,11 +98,7 @@ export function GameCanvas({ width, height, className = '' }: GameCanvasProps) {
           ctx.fillText(displayText, shrimp.x, shrimp.y - shrimp.size - 5);
         });
         
-        // Draw score display (lower left corner)
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'left';
-        ctx.fillText(`Score: ${playerSize - 10}`, 10, canvas.height - 10);
+        // Score display is now handled in the page.tsx file
       }
 
       // Request next animation frame
