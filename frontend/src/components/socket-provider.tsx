@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { Socket, io } from 'socket.io-client';
 
 // Define the socket context interface
@@ -23,6 +23,7 @@ export interface Shrimp {
   x: number;
   y: number;
   size: number;
+  score: number;  // Added score property
 }
 
 // Interface for Food item
@@ -57,6 +58,12 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [gameState, setGameState] = useState<GameState | null>(null);
+  
+  // Keep track of previously seen shrimps to detect collisions
+  const prevShrimpsRef = useRef<Map<string, Shrimp>>(new Map());
+  
+  // Track when the last game state update was received
+  const lastUpdateTimeRef = useRef<number>(0);
 
   // Function to send player input to the server
   const sendInput = (inputData: PlayerInput) => {
@@ -69,6 +76,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
   useEffect(() => {
     // Get the backend URL from environment variable or use default
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+    console.log(`Connecting to backend at: ${backendUrl}`);
     
     // Create socket connection
     const socketInstance = io(backendUrl, {
@@ -97,8 +105,79 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
 
     // Game state update handler
     const onGameUpdate = (updatedState: GameState) => {
-      console.log('Game state update received:', updatedState);
-      console.log(`Shrimps: ${updatedState.shrimps.length}, Foods: ${updatedState.foods.length}`);
+      if (!updatedState) {
+        console.error('Received empty game state');
+        return;
+      }
+      
+      // Log update time for debugging
+      const now = Date.now();
+      const timeSinceLastUpdate = now - lastUpdateTimeRef.current;
+      lastUpdateTimeRef.current = now;
+      console.log(`Game state updated after ${timeSinceLastUpdate}ms`);
+      
+      // Validate the structure of the game state
+      if (!Array.isArray(updatedState.shrimps) || !Array.isArray(updatedState.foods)) {
+        console.error('Invalid game state structure:', updatedState);
+        return;
+      }
+      
+      console.log(`Received game state with ${updatedState.shrimps.length} shrimps and ${updatedState.foods.length} foods`);
+      
+      // Check if there's a player shrimp for the current socket
+      if (socketInstance && updatedState.shrimps.length > 0) {
+        const playerShrimp = updatedState.shrimps.find(shrimp => shrimp.id === socketInstance.id);
+        if (playerShrimp) {
+          console.log(`My shrimp: position (${playerShrimp.x}, ${playerShrimp.y}), size: ${playerShrimp.size}, score: ${playerShrimp.score}`);
+        } else {
+          console.warn(`No shrimp found for player with ID: ${socketInstance.id}`);
+        }
+      }
+      
+      // Create a map of current shrimps for easy lookup
+      const currentShrimps = new Map<string, Shrimp>();
+      updatedState.shrimps.forEach(shrimp => {
+        currentShrimps.set(shrimp.id, shrimp);
+      });
+      
+      // Check for shrimps that were present before but are now gone (eaten or disconnected)
+      if (prevShrimpsRef.current.size > 0) {
+        const eatenShrimps: string[] = [];
+        
+        prevShrimpsRef.current.forEach((prevShrimp, id) => {
+          if (!currentShrimps.has(id)) {
+            eatenShrimps.push(id);
+          }
+        });
+        
+        // Log any shrimps that were eaten (excluding the socket's own shrimp to avoid duplicate logging)
+        if (eatenShrimps.length > 0) {
+          eatenShrimps.forEach(id => {
+            // Check if it's not the local player (already logged by server)
+            if (socketInstance.id !== id) {
+              console.log(`Shrimp ${id.substring(0, 6)}... was removed from the game`);
+            }
+          });
+        }
+      }
+      
+      // Track score changes to identify when players eat others
+      currentShrimps.forEach((currentShrimp, id) => {
+        const prevShrimp = prevShrimpsRef.current.get(id);
+        if (prevShrimp && currentShrimp.score > prevShrimp.score) {
+          const scoreDiff = currentShrimp.score - prevShrimp.score;
+          
+          // If score increased by more than the food value, a shrimp was eaten
+          if (scoreDiff >= 20) { // SCORE_PER_SHRIMP value from backend
+            console.log(`Shrimp ${id.substring(0, 6)}... ate another shrimp! Score: ${currentShrimp.score}`);
+          }
+        }
+      });
+      
+      // Update previous shrimps reference
+      prevShrimpsRef.current = currentShrimps;
+      
+      // Update the game state
       setGameState(updatedState);
     };
 
@@ -107,6 +186,11 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
     socketInstance.on('disconnect', onDisconnect);
     socketInstance.on('connect_error', onError);
     socketInstance.on('gameUpdate', onGameUpdate);
+    
+    // Log any other events for debugging
+    socketInstance.onAny((eventName, ...args) => {
+      console.log(`Socket event: ${eventName}`, args);
+    });
 
     // Cleanup on unmount
     return () => {
@@ -114,6 +198,7 @@ export const SocketProvider = ({ children }: SocketProviderProps) => {
       socketInstance.off('disconnect', onDisconnect);
       socketInstance.off('connect_error', onError);
       socketInstance.off('gameUpdate', onGameUpdate);
+      socketInstance.offAny();
       socketInstance.disconnect();
     };
   }, []);

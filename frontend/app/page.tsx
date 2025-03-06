@@ -4,10 +4,19 @@ import { SocketProvider, useSocket } from '@/src/components/socket-provider';
 import { GameCanvas } from '@/src/components/game-canvas';
 import './game-styles.css';
 
+// Interface for leaderboard entry
+interface LeaderboardEntry {
+  id: string;
+  size: number;
+  score: number;
+  isLocalPlayer: boolean;
+}
+
 // Main game component
 function Game() {
   const { isConnected, socket, gameState } = useSocket();
   const [playerCount, setPlayerCount] = useState(0);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
   useEffect(() => {
     if (!socket) return;
@@ -22,15 +31,41 @@ function Game() {
     };
   }, [socket]);
 
-  // Calculate player score
-  const getPlayerScore = () => {
+  // Update leaderboard whenever game state changes
+  useEffect(() => {
+    if (!gameState || !socket) return;
+    
+    // Create leaderboard entries from shrimps
+    const entries: LeaderboardEntry[] = gameState.shrimps.map(shrimp => ({
+      id: shrimp.id,
+      size: shrimp.size,
+      score: shrimp.score,
+      isLocalPlayer: shrimp.id === socket.id
+    }));
+    
+    // Sort by score descending
+    entries.sort((a, b) => b.score - a.score);
+    
+    // Update leaderboard state
+    setLeaderboard(entries);
+  }, [gameState, socket]);
+
+  // We're no longer displaying the score
+  // but keeping the function for future reference
+  const getPlayerSize = () => {
     if (!gameState || !socket) return 0;
     
     const playerShrimp = gameState.shrimps.find(shrimp => shrimp.id === socket.id);
     if (playerShrimp) {
-      return playerShrimp.size - 10; // Score = size - initial size
+      return playerShrimp.size;
     }
     return 0;
+  };
+
+  // Get player rank from leaderboard
+  const getPlayerRank = (): number => {
+    const playerIndex = leaderboard.findIndex(entry => entry.isLocalPlayer);
+    return playerIndex !== -1 ? playerIndex + 1 : 0;
   };
 
   return (
@@ -56,25 +91,65 @@ function Game() {
           </div>
         </header>
         
-        {/* Game container */}
-        <div className="relative w-full game-container game-glow">
-          <div className="bg-black/25 rounded-lg p-1.5 backdrop-blur-sm border border-white/10 shadow-xl">
-            {/* Game canvas - using the GameCanvas component instead of inline canvas */}
-            <GameCanvas 
-              width={800} 
-              height={600} 
-              className="w-full h-full rounded bg-black/50"
-            />
-            
-            {/* Game overlay UI elements */}
-            <div className="absolute bottom-4 left-4 bg-black/50 px-3 py-1.5 rounded-md text-sm backdrop-blur-sm border border-white/10">
-              Score: {getPlayerScore()}
+        {/* Game container and leaderboard layout */}
+        <div className="w-full flex gap-4">
+          {/* Game container */}
+          <div className="relative flex-grow game-container game-glow">
+            <div className="bg-black/25 rounded-lg p-1.5 backdrop-blur-sm border border-white/10 shadow-xl">
+              {/* Game canvas - using the GameCanvas component instead of inline canvas */}
+              <GameCanvas 
+                width={800} 
+                height={600} 
+                className="w-full h-full rounded bg-black/50"
+              />
+              
+              {/* Controls hint */}
+              <div className="absolute top-4 right-4 bg-black/50 px-3 py-1.5 rounded-md text-xs backdrop-blur-sm border border-white/10 text-muted-foreground">
+                Move your mouse to control
+              </div>
             </div>
+          </div>
+          
+          {/* Leaderboard panel */}
+          <div className="w-64 bg-black/25 rounded-lg p-4 backdrop-blur-sm border border-white/10 shadow-xl">
+            <h2 className="text-lg font-semibold mb-3 text-center text-glow">Leaderboard</h2>
+            {leaderboard.length > 0 ? (
+              <div className="space-y-2">
+                {leaderboard.slice(0, 10).map((entry, index) => (
+                  <div 
+                    key={entry.id} 
+                    className={`flex justify-between items-center py-1 px-2 rounded ${
+                      entry.isLocalPlayer 
+                        ? 'bg-blue-900/50 border border-blue-700/50' 
+                        : 'bg-black/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-400">#{index + 1}</span>
+                      <span className={`${entry.isLocalPlayer ? 'text-yellow-300 font-semibold' : 'text-white'}`}>
+                        {entry.isLocalPlayer ? 'YOU' : `Player ${entry.id.substring(0, 4)}`}
+                      </span>
+                    </div>
+                    <span className="text-green-400 font-medium">{entry.score}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center text-gray-400 text-sm">Waiting for players...</div>
+            )}
             
-            {/* Controls hint */}
-            <div className="absolute top-4 right-4 bg-black/50 px-3 py-1.5 rounded-md text-xs backdrop-blur-sm border border-white/10 text-muted-foreground">
-              Move your mouse to control
-            </div>
+            {/* Your rank indicator */}
+            {getPlayerRank() > 0 && (
+              <div className="mt-4 pt-3 border-t border-white/10">
+                <div className="text-center text-sm">
+                  <span className="text-gray-400">Your Rank: </span>
+                  <span className="text-yellow-300 font-semibold">#{getPlayerRank()}</span>
+                  {getPlayerRank() === 1 && (
+                    <span className="ml-2 text-yellow-300">👑</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
@@ -83,7 +158,7 @@ function Game() {
           <h2 className="text-lg font-semibold mb-2 text-glow">How to Play</h2>
           <p className="text-sm text-muted-foreground">
             Control your shrimp by moving your mouse. The shrimp will follow your cursor position.
-            Eat the green food dots to grow larger. Your score increases as you grow!
+            Eat the green food dots to grow larger and earn points. Larger shrimps can eat smaller ones!
           </p>
         </div>
       </div>

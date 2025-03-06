@@ -7,6 +7,7 @@ export interface Shrimp {
   x: number;       // X position on the map
   y: number;       // Y position on the map
   size: number;    // Size of the shrimp (grows as it eats)
+  score: number;   // Player's score
 }
 
 // Interface for food items
@@ -20,8 +21,14 @@ export interface Food {
 const MAP_WIDTH = 800;
 const MAP_HEIGHT = 600;
 const INITIAL_SHRIMP_SIZE = 10;
-const FOOD_SIZE = 5;
+const MAX_SHRIMP_SIZE = 50;  // Maximum size a shrimp can grow to
 const INITIAL_FOOD_COUNT = 10;
+const MIN_FOOD_SIZE = 4;     // Minimum food size
+const MAX_FOOD_SIZE = 6;     // Maximum food size
+const GROWTH_PER_FOOD = 1;   // How much a shrimp grows per food eaten
+const GROWTH_PER_SHRIMP = 5; // How much a shrimp grows when eating another shrimp
+const SCORE_PER_FOOD = 5;    // Score gained per food item (increased from 1)
+const SCORE_PER_SHRIMP = 20; // Score gained per shrimp eaten
 
 // Game state storage
 const shrimps: Map<string, Shrimp> = new Map();
@@ -29,12 +36,22 @@ const foods: Food[] = [];
 
 /**
  * Generates a random position within the map boundaries
+ * Ensures shrimps don't spawn too close to edges
  */
 function getRandomPosition() {
+  // Add margin to ensure entities are visible
+  const margin = 50;
   return {
-    x: Math.floor(Math.random() * MAP_WIDTH),
-    y: Math.floor(Math.random() * MAP_HEIGHT)
+    x: margin + Math.floor(Math.random() * (MAP_WIDTH - 2 * margin)),
+    y: margin + Math.floor(Math.random() * (MAP_HEIGHT - 2 * margin))
   };
+}
+
+/**
+ * Generates a random food size within the defined range
+ */
+function getRandomFoodSize() {
+  return MIN_FOOD_SIZE + Math.floor(Math.random() * (MAX_FOOD_SIZE - MIN_FOOD_SIZE + 1));
 }
 
 /**
@@ -42,13 +59,17 @@ function getRandomPosition() {
  * @param id The socket ID of the connecting player
  */
 export function addShrimp(id: string): Shrimp {
+  // Remove any existing shrimp with this ID to prevent duplicates
+  shrimps.delete(id);
+  
   // Create a new shrimp with random position and initial size
   const position = getRandomPosition();
   const newShrimp: Shrimp = {
     id,
     x: position.x,
     y: position.y,
-    size: INITIAL_SHRIMP_SIZE
+    size: INITIAL_SHRIMP_SIZE,
+    score: 0
   };
   
   // Store the shrimp in the map
@@ -66,6 +87,8 @@ export function removeShrimp(id: string): boolean {
   const removed = shrimps.delete(id);
   if (removed) {
     console.log(`Shrimp removed: ${id}`);
+  } else {
+    console.warn(`Attempted to remove non-existent shrimp: ${id}`);
   }
   return removed;
 }
@@ -78,7 +101,10 @@ export function removeShrimp(id: string): boolean {
  */
 export function updateShrimpPosition(id: string, x: number, y: number): Shrimp | null {
   const shrimp = shrimps.get(id);
-  if (!shrimp) return null;
+  if (!shrimp) {
+    console.warn(`Tried to update position for non-existent shrimp: ${id}`);
+    return null;
+  }
   
   // Update the shrimp's position
   shrimp.x = Math.max(0, Math.min(MAP_WIDTH, x));
@@ -99,7 +125,7 @@ export function spawnFood(count: number = INITIAL_FOOD_COUNT): void {
     foods.push({
       x: position.x,
       y: position.y,
-      size: FOOD_SIZE
+      size: getRandomFoodSize()  // Random size between MIN and MAX
     });
   }
   console.log(`Spawned ${count} food items`);
@@ -110,6 +136,12 @@ export function spawnFood(count: number = INITIAL_FOOD_COUNT): void {
  * Updates shrimp size and removes eaten food
  */
 export function processEating(): void {
+  // Verify we have valid game state
+  if (shrimps.size === 0) {
+    return; // No shrimps to process
+  }
+  
+  // Process collisions between shrimp and food
   shrimps.forEach(shrimp => {
     // Check for food collisions
     for (let i = foods.length - 1; i >= 0; i--) {
@@ -121,24 +153,95 @@ export function processEating(): void {
       
       // If the distance is less than the sum of their sizes, collision occurred
       if (distance < shrimp.size + food.size) {
-        // Increase shrimp size (grow)
-        shrimp.size += 1;
+        // Increase shrimp size (grow) up to maximum
+        if (shrimp.size < MAX_SHRIMP_SIZE) {
+          shrimp.size += GROWTH_PER_FOOD;
+          
+          // Ensure size doesn't exceed maximum
+          if (shrimp.size > MAX_SHRIMP_SIZE) {
+            shrimp.size = MAX_SHRIMP_SIZE;
+          }
+        }
+        
+        // Increase score
+        shrimp.score += SCORE_PER_FOOD;
         
         // Remove the eaten food
         foods.splice(i, 1);
         
-        console.log(`Shrimp ${shrimp.id} ate food, new size: ${shrimp.size}`);
+        console.log(`Shrimp ${shrimp.id} ate food, new size: ${shrimp.size}, score: ${shrimp.score}`);
         
         // Spawn a new food to replace the eaten one
         const position = getRandomPosition();
         foods.push({
           x: position.x,
           y: position.y,
-          size: FOOD_SIZE
+          size: getRandomFoodSize()  // Random size between MIN and MAX
         });
       }
     }
   });
+  
+  // Process collisions between shrimps
+  const shrimpArray = Array.from(shrimps.values());
+  
+  // Check each pair of shrimps for collisions
+  for (let i = 0; i < shrimpArray.length; i++) {
+    const shrimp1 = shrimpArray[i];
+    
+    for (let j = i + 1; j < shrimpArray.length; j++) {
+      const shrimp2 = shrimpArray[j];
+      
+      // Calculate distance between shrimps
+      const dx = shrimp1.x - shrimp2.x;
+      const dy = shrimp1.y - shrimp2.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      // Check if they are close enough to collide (within size/2 distance)
+      if (distance < (shrimp1.size + shrimp2.size) / 2) {
+        // Determine which shrimp is larger
+        if (shrimp1.size > shrimp2.size) {
+          // Shrimp 1 eats Shrimp 2
+          if (shrimp1.size < MAX_SHRIMP_SIZE) {
+            shrimp1.size += GROWTH_PER_SHRIMP;
+            if (shrimp1.size > MAX_SHRIMP_SIZE) {
+              shrimp1.size = MAX_SHRIMP_SIZE;
+            }
+          }
+          shrimp1.score += SCORE_PER_SHRIMP;
+          
+          // Log the event
+          console.log(`Shrimp ${shrimp1.id} ate Shrimp ${shrimp2.id}, new size: ${shrimp1.size}, score: ${shrimp1.score}`);
+          
+          // Remove the eaten shrimp
+          shrimps.delete(shrimp2.id);
+          
+          // Break inner loop since shrimp2 is gone
+          break;
+        } else if (shrimp2.size > shrimp1.size) {
+          // Shrimp 2 eats Shrimp 1
+          if (shrimp2.size < MAX_SHRIMP_SIZE) {
+            shrimp2.size += GROWTH_PER_SHRIMP;
+            if (shrimp2.size > MAX_SHRIMP_SIZE) {
+              shrimp2.size = MAX_SHRIMP_SIZE;
+            }
+          }
+          shrimp2.score += SCORE_PER_SHRIMP;
+          
+          // Log the event
+          console.log(`Shrimp ${shrimp2.id} ate Shrimp ${shrimp1.id}, new size: ${shrimp2.size}, score: ${shrimp2.score}`);
+          
+          // Remove the eaten shrimp
+          shrimps.delete(shrimp1.id);
+          
+          // Break both loops since shrimp1 is gone
+          i = shrimpArray.length; // Force outer loop exit
+          break;
+        }
+        // If they're the same size, no one gets eaten
+      }
+    }
+  }
   
   // If food count drops below initial count for any reason, spawn more
   if (foods.length < INITIAL_FOOD_COUNT) {

@@ -21,8 +21,18 @@ export function GameCanvas({ width, height, className = '' }: GameCanvasProps) {
   const [isPerformanceMode, setIsPerformanceMode] = useState(false);
   // Add state for manual mode control
   const [isAutoPerformance, setIsAutoPerformance] = useState(true);
+  // Add state for debug mode
+  const [isDebugMode, setIsDebugMode] = useState(false);
   // Track FPS for performance monitoring
   const fpsCounterRef = useRef({ frames: 0, lastTime: performance.now(), fps: 60 });
+  // Ref to store previous game state for change detection
+  const prevGameStateRef = useRef<any>(null);
+  // Flag to force redraw when needed
+  const needsRedrawRef = useRef<boolean>(true);
+  // Track last render time for transition smoothing
+  const lastRenderTimeRef = useRef<number>(performance.now());
+  // Store animation frame ID for cleanup
+  const animationFrameIdRef = useRef<number | null>(null);
   
   // SIMPLIFIED FOOD ANIMATION - Just track eaten events with timestamps
   const [eatAnimation, setEatAnimation] = useState<{active: boolean, time: number, x: number, y: number}>({
@@ -128,6 +138,9 @@ export function GameCanvas({ width, height, className = '' }: GameCanvasProps) {
           });
           
           cachedCanvasesRef.current = cachedCanvases;
+          
+          // Force a redraw when images are loaded
+          needsRedrawRef.current = true;
         }
       };
     });
@@ -139,7 +152,7 @@ export function GameCanvas({ width, height, className = '' }: GameCanvasProps) {
     };
   }, []);
 
-  // Update player size whenever game state changes
+  // Update player size whenever game state changes and check if we need to redraw
   useEffect(() => {
     if (gameState && socket) {
       // Find the current player's shrimp
@@ -147,8 +160,60 @@ export function GameCanvas({ width, height, className = '' }: GameCanvasProps) {
       if (playerShrimp) {
         setPlayerSize(playerShrimp.size);
       }
+      
+      // Compare with previous state to determine if redraw is needed
+      if (prevGameStateRef.current) {
+        // Check if any shrimp positions or sizes changed
+        const prevShrimps = prevGameStateRef.current.shrimps || [];
+        const currentShrimps = gameState.shrimps || [];
+        
+        if (prevShrimps.length !== currentShrimps.length) {
+          needsRedrawRef.current = true;
+        } else {
+          // Check for changes in position or size
+          for (let i = 0; i < currentShrimps.length; i++) {
+            const current = currentShrimps[i];
+            const prev = prevShrimps.find((s: any) => s.id === current.id);
+            
+            if (!prev || prev.x !== current.x || prev.y !== current.y || prev.size !== current.size) {
+              needsRedrawRef.current = true;
+              break;
+            }
+          }
+        }
+        
+        // Check if food items changed
+        const prevFoods = prevGameStateRef.current.foods || [];
+        const currentFoods = gameState.foods || [];
+        
+        if (prevFoods.length !== currentFoods.length) {
+          needsRedrawRef.current = true;
+        }
+      } else {
+        // First state update, need to draw
+        needsRedrawRef.current = true;
+      }
+      
+      // Update previous state reference
+      prevGameStateRef.current = gameState;
     }
   }, [gameState, socket]);
+
+  // Debug function to log game state
+  const logGameState = () => {
+    if (gameState) {
+      if (isDebugMode) {
+        console.log(`Game state: ${gameState.shrimps.length} shrimps, ${gameState.foods.length} foods`);
+        if (gameState.shrimps.length > 0) {
+          console.log('First shrimp:', gameState.shrimps[0]);
+        }
+      }
+    } else {
+      if (isDebugMode) {
+        console.log('Game state is null');
+      }
+    }
+  };
 
   // Draw the game world and entities
   useEffect(() => {
@@ -160,15 +225,20 @@ export function GameCanvas({ width, height, className = '' }: GameCanvasProps) {
     if (!ctx) return;
 
     let frameCount = 0;
-    let lastFrameTime = performance.now();
+    
+    // Log game state initially to diagnose issues
+    if (isDebugMode) {
+      logGameState();
+    }
     
     // Function to render the game
     const renderGame = () => {
-      // Measure FPS
+      // Calculate delta time for smooth transitions
       const currentTime = performance.now();
-      const elapsed = currentTime - lastFrameTime;
+      const deltaTime = (currentTime - lastRenderTimeRef.current) / 1000; // in seconds
+      lastRenderTimeRef.current = currentTime;
       
-      // Update FPS counter
+      // Measure FPS
       fpsCounterRef.current.frames++;
       if (currentTime - fpsCounterRef.current.lastTime >= 1000) {
         fpsCounterRef.current.fps = fpsCounterRef.current.frames;
@@ -184,28 +254,199 @@ export function GameCanvas({ width, height, className = '' }: GameCanvasProps) {
           
           if (shouldUsePerformanceMode !== isPerformanceMode) {
             setIsPerformanceMode(shouldUsePerformanceMode);
-            console.log(`Performance mode ${shouldUsePerformanceMode ? 'enabled' : 'disabled'}, FPS: ${fpsCounterRef.current.fps}, Entities: ${totalEntities}`);
+            if (isDebugMode) {
+              console.log(`Performance mode ${shouldUsePerformanceMode ? 'enabled' : 'disabled'}, FPS: ${fpsCounterRef.current.fps}, Entities: ${totalEntities}`);
+            }
           }
+        }
+        
+        // Log game state once per second for debugging
+        if (isDebugMode) {
+          logGameState();
         }
       }
       
-      // Only render every other frame if in performance mode
-      if (isPerformanceMode && frameCount % 2 !== 0) {
+      // Only render if needed or every other frame if in performance mode
+      if (!needsRedrawRef.current && isPerformanceMode && frameCount % 2 !== 0) {
         frameCount++;
-        requestAnimationFrame(renderGame);
+        animationFrameIdRef.current = requestAnimationFrame(renderGame);
         return;
       }
       
+      // Always force redraw for now to ensure rendering
+      needsRedrawRef.current = true;
+      
+      // Reset the redraw flag
+      needsRedrawRef.current = false;
       frameCount++;
-      lastFrameTime = currentTime;
       
       // Clear the canvas
       ctx.fillStyle = '#0f172a'; // Dark blue background
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
+      // Draw a grid for visual reference in debug mode
+      if (isDebugMode) {
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1;
+        const gridSize = 40;
+        
+        for (let x = 0; x < canvas.width; x += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+          ctx.stroke();
+        }
+        
+        for (let y = 0; y < canvas.height; y += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+          ctx.stroke();
+        }
+      }
+      
+      // Render the game state only if we have it
+      if (gameState && socket) {
+        // Draw food items
+        const foodImageName = isPerformanceMode ? 'foodSimple' : 'foodPlankton';
+        
+        gameState.foods.forEach(food => {
+          // Debug the food position if in debug mode
+          if (isDebugMode && Math.random() < 0.01) { // Only log 1% of the time to reduce spam
+            console.log(`Drawing food at ${food.x},${food.y} with size ${food.size}`);
+          }
+          
+          // In debug mode, always draw a simple circle for food
+          if (isDebugMode) {
+            ctx.fillStyle = '#4ade80';
+            ctx.beginPath();
+            ctx.arc(food.x, food.y, food.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          
+          // Try to draw the image if available and not in debug mode or in both modes
+          if ((!isDebugMode || (isDebugMode && Math.random() > 0.5)) && Object.keys(images).length > 0 && images[foodImageName]) {
+            // Get the cached food image if available
+            const closestSize = [5, 10, 15, 20, 25].reduce((prev, curr) => 
+              Math.abs(curr - food.size) < Math.abs(prev - food.size) ? curr : prev, 10
+            );
+            const cacheKey = `${foodImageName}_${closestSize}`;
+            
+            if (cachedCanvasesRef.current[cacheKey]) {
+              // Draw the cached canvas at the food position
+              ctx.drawImage(
+                cachedCanvasesRef.current[cacheKey],
+                food.x - food.size,
+                food.y - food.size,
+                food.size * 2,
+                food.size * 2
+              );
+            } else if (images[foodImageName]) {
+              // Fallback to drawing the image directly
+              ctx.drawImage(
+                images[foodImageName],
+                food.x - food.size,
+                food.y - food.size,
+                food.size * 2,
+                food.size * 2
+              );
+            }
+          }
+        });
+        
+        // Draw player shrimps
+        gameState.shrimps.forEach(shrimp => {
+          const isLocalPlayer = shrimp.id === socket.id;
+          
+          // Debug the shrimp position if in debug mode
+          if (isDebugMode && isLocalPlayer) {
+            console.log(`Drawing shrimp at ${shrimp.x},${shrimp.y} with size ${shrimp.size}, local: ${isLocalPlayer}`);
+          }
+          
+          // Scale shrimp sprite based on size with a multiplier of 2 (size * 2 pixels)
+          const scaledSize = shrimp.size * 2;
+          
+          // In debug mode, always draw a simple circle for shrimp
+          if (isDebugMode) {
+            ctx.fillStyle = isLocalPlayer ? '#ff0000' : '#0000ff';
+            ctx.beginPath();
+            ctx.arc(shrimp.x, shrimp.y, shrimp.size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          
+          // Choose image based on whether it's local player or other player
+          const shrimpImageName = isLocalPlayer
+            ? isPerformanceMode ? 'shrimpSimple' : 'shrimp'
+            : isPerformanceMode ? 'shrimpBlueSimple' : 'shrimpBlue';
+          
+          // Only attempt to draw the image if images are loaded and not in debug mode or in both modes
+          if ((!isDebugMode || (isDebugMode && !isLocalPlayer)) && Object.keys(images).length > 0 && images[shrimpImageName]) {
+            // Get the closest pre-cached size
+            const closestSize = [20, 30, 40, 50, 60].reduce((prev, curr) => 
+              Math.abs(curr - scaledSize) < Math.abs(prev - scaledSize) ? curr : prev, 30
+            );
+            
+            const cacheKey = `${shrimpImageName}_${closestSize}`;
+            
+            // Save context for drawing
+            ctx.save();
+            
+            // Draw the shrimp sprite
+            if (cachedCanvasesRef.current[cacheKey]) {
+              // Draw the cached canvas at the shrimp position
+              ctx.drawImage(
+                cachedCanvasesRef.current[cacheKey],
+                shrimp.x - scaledSize / 2,
+                shrimp.y - scaledSize / 2,
+                scaledSize,
+                scaledSize
+              );
+            } else if (images[shrimpImageName]) {
+              // Fallback to drawing the image directly
+              ctx.drawImage(
+                images[shrimpImageName],
+                shrimp.x - scaledSize / 2,
+                shrimp.y - scaledSize / 2,
+                scaledSize,
+                scaledSize
+              );
+            }
+            
+            ctx.restore();
+          }
+          
+          // Add player ID label
+          ctx.fillStyle = 'white';
+          ctx.font = isLocalPlayer ? 'bold 14px Arial' : '12px Arial';
+          const displayId = isLocalPlayer ? 'YOU' : shrimp.id.substring(0, 6);
+          const textWidth = ctx.measureText(displayId).width;
+          
+          // Center the text below the shrimp
+          const textX = shrimp.x - textWidth / 2;
+          const textY = shrimp.y + scaledSize / 2 + 20;
+          
+          // Draw text shadow for visibility
+          ctx.fillStyle = 'black';
+          ctx.fillText(displayId, textX + 1, textY + 1);
+          
+          // Draw the actual text
+          ctx.fillStyle = isLocalPlayer ? '#ffff00' : 'white';
+          ctx.fillText(displayId, textX, textY);
+        });
+      } else {
+        // Draw a message if no game state is available
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('Waiting for game state...', canvas.width / 2, canvas.height / 2);
+        ctx.textAlign = 'start'; // Reset alignment
+      }
+      
       // UNMISSABLE food eating animation
       if (eatAnimation.active) {
-        console.log('Rendering eat animation');
+        if (isDebugMode) {
+          console.log('Rendering eat animation');
+        }
         
         // Calculate animation properties
         const age = Date.now() - eatAnimation.time;
@@ -248,269 +489,76 @@ export function GameCanvas({ width, height, className = '' }: GameCanvasProps) {
         
         // OPTION 3: HUGE NOM text
         ctx.fillStyle = 'white';
-        ctx.shadowColor = 'red';
-        ctx.shadowBlur = 15;
-        ctx.font = 'bold 48px Arial'; // BIGGER font
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('NOM!', eatAnimation.x, eatAnimation.y - 60);
-        
-        // OPTION 4: Extra visual elements
-        // Draw sparkles
-        for (let i = 0; i < 12; i++) {
-          const angle = (i / 12) * Math.PI * 2;
-          const x = eatAnimation.x + Math.cos(angle) * currentRadius * 0.8;
-          const y = eatAnimation.y + Math.sin(angle) * currentRadius * 0.8;
-          
-          // Star shape
-          ctx.fillStyle = 'yellow';
-          ctx.beginPath();
-          for (let j = 0; j < 5; j++) {
-            const starAngle = (j / 5) * Math.PI * 2;
-            const length = (j % 2 === 0) ? 10 : 5;
-            const pointX = x + Math.cos(starAngle) * length;
-            const pointY = y + Math.sin(starAngle) * length;
-            
-            if (j === 0) ctx.moveTo(pointX, pointY);
-            else ctx.lineTo(pointX, pointY);
-          }
-          ctx.closePath();
-          ctx.fill();
-        }
-        
-        // Clear shadow for rest of rendering
-        ctx.shadowBlur = 0;
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center'; // Center the text
+        ctx.fillText('NOM!', eatAnimation.x, eatAnimation.y - currentRadius * 0.5);
         
         // Restore context
         ctx.restore();
       }
       
-      // Draw grid lines (basic game world) - simplified in performance mode
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 1;
-      
-      const gridSize = isPerformanceMode ? 80 : 40; // Larger grid in performance mode
-      for (let x = 0; x < canvas.width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      }
-      
-      for (let y = 0; y < canvas.height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-
-      // Only render game entities if we have game state and images are loaded
-      if (gameState && Object.keys(images).length > 0) {
-        const cachedCanvases = cachedCanvasesRef.current;
-        
-        // Draw food items with variety - only if in viewport
-        gameState.foods.forEach((food, index) => {
-          // Skip rendering if out of viewport (with margin)
-          if (food.x < -50 || food.x > canvas.width + 50 || 
-              food.y < -50 || food.y > canvas.height + 50) {
-            return;
-          }
-          
-          // In performance mode, use the simple food for all types
-          if (isPerformanceMode) {
-            const cacheKey = `foodSimple_${Math.round(food.size * 2)}`;
-            const cachedCanvas = cachedCanvases[cacheKey];
-            
-            if (cachedCanvas) {
-              ctx.drawImage(cachedCanvas, food.x - food.size, food.y - food.size);
-            } else {
-              ctx.drawImage(
-                images.foodSimple,
-                food.x - food.size, 
-                food.y - food.size,
-                food.size * 2,
-                food.size * 2
-              );
-            }
-            return;
-          }
-          
-          // Normal mode - use a deterministic approach to select food type
-          // Instead of using the array index (which changes when food is eaten),
-          // use the food's coordinates to determine its type consistently
-          const foodTypes = ['foodAlgae', 'foodPlankton', 'foodBubble'];
-          
-          // Hash the food's position to get a consistent type
-          // This ensures each food maintains its appearance regardless of array position
-          const positionHash = Math.abs(Math.floor(food.x * 100) + Math.floor(food.y * 100));
-          const foodType = foodTypes[positionHash % foodTypes.length];
-          
-          // Calculate the size based on food size
-          const drawSize = Math.round(food.size * 2); // Round to nearest to better match cache
-          const roundedSize = [10, 15, 20, 25].reduce((prev, curr) => 
-            Math.abs(curr - drawSize) < Math.abs(prev - drawSize) ? curr : prev, 10);
-          
-          // Use cached canvas if available
-          const cacheKey = `${foodType}_${roundedSize}`;
-          const cachedCanvas = cachedCanvases[cacheKey];
-          
-          if (cachedCanvas) {
-            // Draw the cached canvas
-            ctx.drawImage(
-              cachedCanvas, 
-              food.x - roundedSize/2, 
-              food.y - roundedSize/2
-            );
-          } else if (images[foodType]) {
-            // Fallback to direct image rendering
-            ctx.drawImage(
-              images[foodType], 
-              food.x - drawSize/2, 
-              food.y - drawSize/2, 
-              drawSize, 
-              drawSize
-            );
-          }
-        });
-
-        // Draw shrimps - only if in viewport
-        gameState.shrimps.forEach(shrimp => {
-          // Skip rendering if out of viewport (with margin)
-          if (shrimp.x < -50 || shrimp.x > canvas.width + 50 || 
-              shrimp.y < -50 || shrimp.y > canvas.height + 50) {
-            return;
-          }
-          
-          // Is this the current player's shrimp?
-          const isPlayer = socket && shrimp.id === socket.id;
-          
-          // Choose shrimp image based on mode and player
-          let shrimpType;
-          
-          if (isPerformanceMode) {
-            // In performance mode, use simple shrimp graphics
-            shrimpType = isPlayer ? 'shrimpSimple' : 'shrimpBlueSimple';
-          } else {
-            // Normal mode with full graphics
-            if (isPlayer) {
-              shrimpType = 'shrimp';
-            } else {
-              // Use player ID to consistently determine if they get a gold shrimp
-              // Use a better hash of the entire ID instead of just the first character
-              const playerIdHash = shrimp.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-              // 10% chance of gold shrimp
-              shrimpType = playerIdHash % 10 === 0 ? 'shrimpGold' : 'shrimpBlue';
-            }
-          }
-          
-          // Calculate size based on shrimp size (scaled up)
-          const drawSize = Math.round(shrimp.size * 4);
-          // Round to nearest cached size
-          const roundedSize = [20, 30, 40, 50, 60].reduce((prev, curr) => 
-            Math.abs(curr - drawSize) < Math.abs(prev - drawSize) ? curr : prev, 40);
-          
-          // Use cached canvas if available
-          const cacheKey = `${shrimpType}_${roundedSize}`;
-          const cachedCanvas = cachedCanvases[cacheKey];
-          
-          // Save current context state
-          ctx.save();
-          
-          // Move to the shrimp position
-          ctx.translate(shrimp.x, shrimp.y);
-          
-          if (cachedCanvas) {
-            // Draw the cached canvas, centered
-            ctx.drawImage(
-              cachedCanvas, 
-              -roundedSize/2, 
-              -roundedSize/2
-            );
-          } else if (images[shrimpType]) {
-            // Fallback to direct image rendering
-            ctx.drawImage(
-              images[shrimpType], 
-              -drawSize/2, 
-              -drawSize/2, 
-              drawSize, 
-              drawSize
-            );
-          }
-          
-          // Draw player ID above shrimp - only in normal mode or for player
-          if (!isPerformanceMode || isPlayer) {
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '10px Arial';
-            ctx.textAlign = 'center';
-            
-            // Show 'YOU' for the player's shrimp
-            const displayText = isPlayer ? 'YOU' : shrimp.id.slice(0, 4);
-            ctx.fillText(displayText, 0, -shrimp.size - 5);
-          }
-          
-          // Restore context state
-          ctx.restore();
-        });
-      }
-
-      // Performance stats - show FPS in debug mode
-      if (isPerformanceMode) {
-        ctx.fillStyle = '#ffffff';
+      // Draw debug information if debug mode is on
+      if (isDebugMode) {
+        // Draw FPS counter
+        ctx.fillStyle = 'white';
         ctx.font = '12px Arial';
-        ctx.textAlign = 'left';
         ctx.fillText(`FPS: ${fpsCounterRef.current.fps}`, 10, 20);
-        ctx.fillText(`Mode: ${isAutoPerformance ? 'Auto' : 'Manual'}`, 10, 40);
+        
+        // Draw performance mode indicator
+        ctx.fillStyle = isPerformanceMode ? 'orange' : 'green';
+        ctx.fillText(`Performance Mode: ${isPerformanceMode ? 'ON' : 'OFF'}`, 10, 40);
+        
+        // Draw connected status
+        ctx.fillStyle = isConnected ? 'green' : 'red';
+        ctx.fillText(`Connected: ${isConnected ? 'YES' : 'NO'}`, 10, 60);
       }
-
-      // Request next animation frame
-      requestAnimationFrame(renderGame);
+      
+      // Continue animation loop
+      animationFrameIdRef.current = requestAnimationFrame(renderGame);
     };
-
-    // Start the render loop
-    const animationId = requestAnimationFrame(renderGame);
-
-    // Clean up animation frame on unmount
-    return () => {
-      cancelAnimationFrame(animationId);
-    };
-  }, [gameState, socket, images, isPerformanceMode, isAutoPerformance]);
-
-  // Function to handle mouse movement
-  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isConnected || !canvasRef.current) return;
-
-    // Get canvas position on the page
-    const rect = canvasRef.current.getBoundingClientRect();
     
-    // Calculate mouse position relative to the canvas
+    // Start the render loop
+    animationFrameIdRef.current = requestAnimationFrame(renderGame);
+    
+    // Cleanup function to cancel animation frame
+    return () => {
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+    };
+  }, [isConnected, isPerformanceMode, isAutoPerformance, gameState, socket, images, isDebugMode]);
+
+  // Handle mouse movement to send player input
+  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isConnected || !socket) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Get mouse position relative to canvas
+    const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
     
-    // Send input to server via socket provider
-    const inputData: PlayerInput = { x, y };
-    sendInput(inputData);
+    // Send input to server
+    sendInput({ x, y });
   };
-
-  // Function to toggle performance mode manually
+  
+  // Toggle performance mode manually
   const togglePerformanceMode = () => {
-    if (isAutoPerformance) {
-      // Switching from auto to manual - keep current mode
-      setIsAutoPerformance(false);
-    } else {
-      // Toggle performance mode
-      setIsPerformanceMode(!isPerformanceMode);
-    }
+    setIsPerformanceMode(prev => !prev);
+    // When manually toggled, disable auto mode
+    setIsAutoPerformance(false);
   };
-
-  // Function to toggle auto/manual mode
+  
+  // Toggle auto performance mode
   const toggleAutoMode = () => {
-    setIsAutoPerformance(!isAutoPerformance);
-    // If switching back to auto, immediately evaluate performance
-    if (!isAutoPerformance) {
-      const totalEntities = gameState ? gameState.foods.length + gameState.shrimps.length : 0;
-      const shouldUsePerformanceMode = fpsCounterRef.current.fps < 40 || totalEntities > 30;
-      setIsPerformanceMode(shouldUsePerformanceMode);
-    }
+    setIsAutoPerformance(prev => !prev);
+  };
+  
+  // Toggle debug mode
+  const toggleDebugMode = () => {
+    setIsDebugMode(prev => !prev);
   };
 
   return (
@@ -519,24 +567,31 @@ export function GameCanvas({ width, height, className = '' }: GameCanvasProps) {
         ref={canvasRef}
         width={width}
         height={height}
-        className={className}
         onMouseMove={handleMouseMove}
+        className={`cursor-crosshair border border-slate-600 rounded-lg shadow-lg ${className}`}
       />
-      
-      {/* Performance controls - Moved to bottom right to avoid overlap */}
-      <div className="absolute bottom-2 right-2 flex flex-col gap-2">
-        <button 
-          onClick={togglePerformanceMode} 
-          className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded text-xs"
+      <div className="absolute bottom-4 left-4 space-y-2">
+        <button
+          onClick={togglePerformanceMode}
+          className="px-2 py-1 bg-slate-700 text-white text-xs rounded hover:bg-slate-600"
         >
-          {isPerformanceMode ? "High Quality" : "Performance Mode"}
+          {isPerformanceMode ? 'Disable' : 'Enable'} Performance Mode
         </button>
-        
-        <button 
-          onClick={toggleAutoMode} 
-          className="bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded text-xs"
+        <button
+          onClick={toggleAutoMode}
+          className={`block px-2 py-1 text-white text-xs rounded hover:bg-slate-600 ${
+            isAutoPerformance ? 'bg-green-700' : 'bg-slate-700'
+          }`}
         >
-          {isAutoPerformance ? "Manual Control" : "Auto Adjust"}
+          Auto Performance: {isAutoPerformance ? 'ON' : 'OFF'}
+        </button>
+        <button
+          onClick={toggleDebugMode}
+          className={`block px-2 py-1 text-white text-xs rounded hover:bg-slate-600 ${
+            isDebugMode ? 'bg-blue-700' : 'bg-slate-700'
+          }`}
+        >
+          Debug Mode: {isDebugMode ? 'ON' : 'OFF'}
         </button>
       </div>
     </div>
